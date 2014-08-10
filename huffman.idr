@@ -1,33 +1,47 @@
-module huffman
+module Main
 
-import Data.SortedSet
 
-data Code : Type where
-  Leaf   : Char -> Code
-  Branch : SortedSet Char -> Code -> Code -> Code
+import Data.List
 
+data Code : List Char -> Type where
+  Leaf   : {c: Char} -> Code (c::Nil)
+  Branch : {lcs, rcs: List Char} -> (Code lcs) -> (Code rcs) -> Code (lcs ++ rcs)
 
 
 data Bit = Zero | One
 
-chars : Code -> SortedSet Char
-chars (Leaf x) = insert x empty
-chars (Branch x _ _) = x
-
-encodeChar : Code -> Char -> List Bit
-encodeChar (Leaf c')      c = Nil
-encodeChar (Branch _ l r) c =
-    if      contains c (chars l) then Zero :: encodeChar l c
-    else if contains c (chars r) then One  :: encodeChar r c
-    else error where error = error
+instance Show Bit where
+    show Zero = "0"
+    show One = "1"
 
 
+notInTail : (Elem x (y::ys) -> _|_) -> (Elem x ys -> _|_)
+notInTail f pf = f (There pf)
 
-exampleCode : Code
-exampleCode = Branch (fromList abc) (Branch (fromList ab) (Leaf 'a') (Leaf 'b')) (Leaf 'c') where
-  abc : List Char
-  abc = 'a'::'b'::'c'::Nil
-  ab : List Char
-  ab = 'a'::'b'::Nil
+inSecond : (lcs: List Char) -> (rcs: List Char) -> (Elem c (lcs ++ rcs)) -> (Elem c lcs -> _|_) -> Elem c rcs
+inSecond []        rcs inBoth notInFirst = inBoth
+inSecond (c :: xs) rcs Here notInFirst = FalseElim (notInFirst Here)
+inSecond (x :: xs) rcs (There y) notInFirst = inSecond xs rcs y (notInTail notInFirst)
 
+encodeChar : Code cs -> (c: Char) -> Elem c cs -> List Bit
+encodeChar Leaf _ pf  = Nil
+encodeChar (Branch {lcs} {rcs} l r) c pf 
+    with (isElem c lcs)
+      | Yes pf2 = Zero :: encodeChar l c pf2
+      | No  pf3 =  One :: encodeChar r c (inSecond lcs rcs pf pf3)
 
+exampleCode : Code ('a'::'b'::'c'::Nil)
+exampleCode = abc where
+    a : Code ('a':: Nil)
+    b : Code ('b':: Nil)
+    c : Code ('c':: Nil)
+    ab : Code ('a'::'b'::Nil)
+    abc : Code ('a'::'b'::'c'::Nil)
+    a = Leaf
+    b = Leaf
+    c = Leaf
+    ab = Branch a b
+    abc = Branch ab c
+
+main : IO ()
+main = print (encodeChar exampleCode 'a' (believe_me ())) -- (There (There Here)))
