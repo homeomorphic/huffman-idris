@@ -30,6 +30,16 @@ encodeChar (Branch {lcs} {rcs} l r) c pf
       | Yes pf2 = Zero :: encodeChar l c pf2
       | No  pf3 =  One :: encodeChar r c (inSecond lcs rcs pf pf3)
 
+decodeChar : Code cs -> List Bit -> Maybe Char
+decodeChar (Leaf {c = c}) [] = Just c
+decodeChar (Leaf {c = c}) (x :: xs) = Nothing
+decodeChar (Branch x y) [] = Nothing
+decodeChar (Branch x y) (c::cs) = case c of
+                                        Zero => decodeChar x cs
+                                        One  => decodeChar y cs
+
+
+
 exampleCode : Code ('a'::'b'::'c'::Nil)
 exampleCode = abc where
     a : Code ('a':: Nil)
@@ -44,4 +54,7 @@ exampleCode = abc where
     abc = Branch ab c
 
 main : IO ()
-main = print (encodeChar exampleCode 'a' (believe_me ())) -- (There (There Here)))
+main = do
+    let encoded = (encodeChar exampleCode 'b' (believe_me ())) -- (There (There Here)))
+    print encoded
+    print $ decodeChar exampleCode encoded
