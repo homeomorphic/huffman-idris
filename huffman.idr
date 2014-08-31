@@ -39,6 +39,15 @@ decodeChar (Branch x y) (c::cs) = case c of
                                         One  => decodeChar y cs
 
 
+singletonList : Elem c [c'] -> c = c'
+singletonList Here = ?singletonList_rhs_1
+singletonList (There x) = ?singletonList_rhs_2
+
+decodeWorks : (code: Code cs) -> (c: Char) -> (pf: Elem c cs) -> (Just c = (decodeChar code (encodeChar code c pf)))
+decodeWorks Leaf c pf = ?works
+decodeWorks (Branch {lcs} {rcs} lc rc) c pf with (isElem c lcs)
+    | Yes pf2 = let ih = decodeWorks lc c pf2 in ?works_2
+    | No  pf3 = let ih = decodeWorks rc c (inSecond lcs rcs pf pf3) in ?works_3
 
 exampleCode : Code ('a'::'b'::'c'::Nil)
 exampleCode = abc where
@@ -58,3 +67,33 @@ main = do
     let encoded = (encodeChar exampleCode 'b' (believe_me ())) -- (There (There Here)))
     print encoded
     print $ decodeChar exampleCode encoded
+
+---------- Proofs ----------
+
+Main.works_3 = proof
+  intros
+  trivial
+
+
+Main.works_2 = proof
+  intros
+  trivial
+
+
+Main.works = proof
+  intros
+  rewrite (singletonList pf)
+  trivial
+
+
+Main.singletonList_rhs_2 = proof
+  intros
+  exact FalseElim (uninhabited x)
+
+
+
+Main.singletonList_rhs_1 = proof
+  intros
+  trivial
+
+
