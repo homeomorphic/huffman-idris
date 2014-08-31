@@ -1,7 +1,7 @@
 module Main
 
-
 import Data.List
+%default total
 
 data Code : List Char -> Type where
   Leaf   : {c: Char} -> Code (c::Nil)
