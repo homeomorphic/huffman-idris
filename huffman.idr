@@ -23,13 +23,6 @@ inSecond []        rcs inBoth notInFirst = inBoth
 inSecond (c :: xs) rcs Here notInFirst = FalseElim (notInFirst Here)
 inSecond (x :: xs) rcs (There y) notInFirst = inSecond xs rcs y (notInTail notInFirst)
 
-encodeChar : Code cs -> (c: Char) -> Elem c cs -> List Bit
-encodeChar Leaf _ pf  = Nil
-encodeChar (Branch {lcs} {rcs} l r) c pf 
-    with (isElem c lcs)
-      | Yes pf2 = Zero :: encodeChar l c pf2
-      | No  pf3 =  One :: encodeChar r c (inSecond lcs rcs pf pf3)
-
 decodeChar : Code cs -> List Bit -> Maybe Char
 decodeChar (Leaf {c = c}) [] = Just c
 decodeChar (Leaf {c = c}) (x :: xs) = Nothing
@@ -38,16 +31,19 @@ decodeChar (Branch x y) (c::cs) = case c of
                                         Zero => decodeChar x cs
                                         One  => decodeChar y cs
 
+encodeChar : (code: Code cs) -> (c: Char) -> Elem c cs -> (res: List Bit ** (Just c = decodeChar code res))
+encodeChar Leaf _ pf  = (Nil ** ?encode)
+encodeChar (Branch {lcs} {rcs} l r) c pf 
+    with (isElem c lcs)
+      | Yes pf2 with (encodeChar l c pf2)
+            | (rest ** pf3) = ((Zero :: rest) ** ?encode_2)
+      | No  pf3 with (encodeChar r c (inSecond lcs rcs pf pf3))
+            | (rest ** pf4) = ((One :: rest) ** ?encode_3)
+
 
 singletonList : Elem c [c'] -> c = c'
 singletonList Here = ?singletonList_rhs_1
 singletonList (There x) = ?singletonList_rhs_2
-
-decodeWorks : (code: Code cs) -> (c: Char) -> (pf: Elem c cs) -> (Just c = (decodeChar code (encodeChar code c pf)))
-decodeWorks Leaf c pf = ?works
-decodeWorks (Branch {lcs} {rcs} lc rc) c pf with (isElem c lcs)
-    | Yes pf2 = let ih = decodeWorks lc c pf2 in ?works_2
-    | No  pf3 = let ih = decodeWorks rc c (inSecond lcs rcs pf pf3) in ?works_3
 
 exampleCode : Code ('a'::'b'::'c'::Nil)
 exampleCode = abc where
@@ -64,26 +60,32 @@ exampleCode = abc where
 
 main : IO ()
 main = do
-    let encoded = (encodeChar exampleCode 'b' (believe_me ())) -- (There (There Here)))
+    let (encoded ** _) = (encodeChar exampleCode 'b' (believe_me ())) -- (There (There Here)))
     print encoded
     print $ decodeChar exampleCode encoded
 
 ---------- Proofs ----------
 
-Main.works_3 = proof
+Main.encode_3 = proof
   intros
+  compute
   trivial
 
 
-Main.works_2 = proof
+Main.encode_2 = proof
   intros
+  compute
   trivial
 
 
-Main.works = proof
+Main.encode = proof
   intros
-  rewrite (singletonList pf)
-  trivial
+  compute
+  equiv c1 = c
+  exact (singletonList pf)
+  exact cong (singletonList pf)
+
+
 
 
 Main.singletonList_rhs_2 = proof
